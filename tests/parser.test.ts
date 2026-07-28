@@ -40,11 +40,11 @@ describe('SorParser', () => {
         expect(Array.isArray(result.dataPoints)).toBe(true);
     });
 
-    it('should parse real fixture file CORE 47.SOR if present', () => {
-        const fixturePath = path.resolve(__dirname, 'fixtures/CORE 47.SOR');
+    it('should parse real fixture file Core-47.sor if present', () => {
+        const fixturePath = path.resolve(__dirname, 'fixtures/Core-47.sor');
 
         if (!fs.existsSync(fixturePath)) {
-            console.warn('Skipping test: CORE 47.SOR not found in tests/fixtures/');
+            console.warn('Skipping test: Core-47.sor not found in tests/fixtures/');
             return;
         }
 
@@ -57,4 +57,20 @@ describe('SorParser', () => {
         expect(Array.isArray(result.events)).toBe(true);
     });
 
+    it('should convert parsed data to JSON using toJson()', () => {
+        const header = new TextEncoder().encode('Map\0');
+        const parser = new SorParser(header.buffer);
+
+        // Direct parser.toJson() call
+        const jsonString = parser.toJson(true);
+        expect(typeof jsonString).toBe('string');
+
+        const parsedObject = JSON.parse(jsonString);
+        expect(parsedObject.cableId).toBe('DEFAULT_CABLE');
+        expect(parsedObject.wavelengthNm).toBe(1550);
+
+        // SorData domain model toJson() call
+        const sorData = parser.parse();
+        expect(sorData.toJson()).toBe(JSON.stringify(parsedObject));
+    });
 });
