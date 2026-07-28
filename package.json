@@ -1,0 +1,30 @@
+{
+  "name": "js-otdr",
+  "version": "1.0.0",
+  "description": "Zero-dependency Telcordia SR-4731 SOR file parser",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "otdr",
+    "sor",
+    "fiber",
+    "telecom",
+    "parser"
+  ],
+  "license": "MIT"
+}
