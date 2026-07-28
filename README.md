@@ -35,6 +35,33 @@ pnpm add @diolan12/js-otdr
 bun add @diolan12/js-otdr
 ```
 
+### CDN (Browser `<script>` Tag)
+
+You can also use `@diolan12/js-otdr` directly in the browser without a bundler via **jsDelivr** or **unpkg**:
+
+#### Via IIFE (`<script>` tag with global `JsOtdr`):
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@diolan12/js-otdr/dist/index.global.js"></script>
+<script>
+  // Access via global JsOtdr namespace
+  const parser = new JsOtdr.SorParser(arrayBuffer);
+  const sorData = parser.parse();
+  console.log(sorData.toJson(true));
+</script>
+```
+
+#### Via ES Module (`<script type="module">`):
+
+```html
+<script type="module">
+  import { SorParser } from 'https://cdn.jsdelivr.net/npm/@diolan12/js-otdr/+esm';
+
+  const parser = new SorParser(arrayBuffer);
+  const sorData = parser.parse();
+</script>
+```
+
 ---
 
 ## 💻 Usage
