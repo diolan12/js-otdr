@@ -2,6 +2,8 @@
 
 > A lightweight, zero-dependency TypeScript/JavaScript library for parsing Telcordia SR-4731 Optical Time Domain Reflectometer (`.sor`) binary files.
 
+[![NPM](https://github.com/diolan12/js-otdr/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/diolan12/js-otdr/actions/workflows/npm-publish.yml)
+[![npm version](https://img.shields.io/npm/v/@diolan12/js-otdr.svg)](https://www.npmjs.com/package/@diolan12/js-otdr)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
@@ -20,17 +22,17 @@
 ## 📦 Installation
 
 ```bash
-npm install js-otdr
+npm install @diolan12/js-otdr
 ```
 
 or with yarn / pnpm / bun:
 
 ```bash
-yarn add js-otdr
+yarn add @diolan12/js-otdr
 # or
-pnpm add js-otdr
+pnpm add @diolan12/js-otdr
 # or
-bun add js-otdr
+bun add @diolan12/js-otdr
 ```
 
 ---
