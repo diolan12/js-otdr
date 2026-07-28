@@ -1,5 +1,5 @@
 {
-  "name": "js-otdr",
+  "name": "@diolan12/js-otdr",
   "version": "1.0.0",
   "description": "Zero-dependency Telcordia SR-4731 SOR file parser",
   "type": "module",
