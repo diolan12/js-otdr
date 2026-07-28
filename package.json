@@ -1,6 +1,6 @@
 {
   "name": "@diolan12/js-otdr",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency Telcordia SR-4731 SOR file parser",
   "type": "module",
   "main": "./dist/index.cjs",
