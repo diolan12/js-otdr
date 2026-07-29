@@ -51,6 +51,33 @@ describe('SorParser', () => {
         const arrayBuffer = getArrayBuffer(fixturePath);
         const parser = new SorParser(arrayBuffer);
         const result = parser.parse();
+        const index = 0;
+
+        expect(result).toBeDefined();
+        expect(result.cableId).toBe("0117");
+        expect(result.timestamp).toBe(1781958546);
+        expect(result.wavelengthNm).toBe(1310);
+        expect(result.pulseWidthNs).toBe(20000);
+        expect(result.duration).toBe(20.0);
+        expect(result.rangeMeters).toBe(102669);
+        expect(result.events[0].distanceMeters).toBe(16066)
+        expect(result.events[0].eventType).toBe("splice")
+        expect(result.events[0].eventNumber).toBe(3)
+        expect(result.events[0].spliceLossDb).toBe(0.193)
+        expect(Array.isArray(result.events)).toBe(true);
+    });
+
+    it('should parse real fixture file Core-1.sor if present', () => {
+        const fixturePath = path.resolve(__dirname, 'fixtures/Core-1.sor');
+
+        if (!fs.existsSync(fixturePath)) {
+            console.warn('Skipping test: Core-1.sor not found in tests/fixtures/');
+            return;
+        }
+
+        const arrayBuffer = getArrayBuffer(fixturePath);
+        const parser = new SorParser(arrayBuffer);
+        const result = parser.parse();
 
         expect(result).toBeDefined();
         expect(result.wavelengthNm).toBeGreaterThan(0);
