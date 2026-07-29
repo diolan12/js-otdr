@@ -114,6 +114,43 @@ const sorData = parser.parse();
 const jsonOutput = sorData.toJson(true);
 ```
 
+### 3. Events Table (`getEventsTable`)
+
+Build an OTDR-style events table — a launch row, a fiber-section row between
+consecutive events, and the last event rendered as end-of-fiber — ready to feed
+straight into a UI table:
+
+```typescript
+const sorData = parser.parse();
+
+for (const row of sorData.getEventsTable()) {
+  console.log(row.type, row.distanceMeters, row.sectionLengthMeters, row.lossDb, row.reflectanceDb);
+}
+```
+
+| # | distance | section length | type | loss | reflectance |
+|---|----------|----------------|------|------|-------------|
+| 0 | 0.000 km | — | `launch` | — | — |
+| — | — | 16.066 km | `fiber-section` | — | — |
+| 1 | 16.066 km | — | `splice` | 0.193 dB | — |
+| — | — | 4.895 km | `fiber-section` | — | — |
+| 2 | 20.961 km | — | `splice` | 1.967 dB | — |
+| … | | | | | |
+| 5 | 39.490 km | — | `end-of-fiber` | — | -49.298 dB |
+
+Each row is a `SorEventsTableRow`:
+
+```typescript
+interface SorEventsTableRow {
+  eventNumber: number | null;        // null for fiber-section rows, 0 for the launch row
+  type: 'launch' | 'fiber-section' | 'splice' | 'connector' | 'saturated' | 'end-of-fiber' | 'unknown';
+  distanceMeters: number | null;     // null for fiber-section rows
+  sectionLengthMeters: number | null; // only set on fiber-section rows
+  lossDb: number | null;
+  reflectanceDb: number | null;
+}
+```
+
 ---
 
 ## 📚 API Reference
@@ -142,6 +179,8 @@ class SorData implements SorMetadata {
   pulseWidthNs: number;
   rangeMeters: number;
   refractiveIndex: number;
+  endToEndLossDb: number;
+  opticalReturnLossDb: number;
   events: SorEvent[];
   dataPoints: number[];
 
@@ -150,6 +189,9 @@ class SorData implements SorMetadata {
 
   // Returns plain JavaScript object clone
   public toObject(): SorMetadata;
+
+  // Builds an OTDR-style events table (launch / fiber sections / events / end-of-fiber)
+  public getEventsTable(): SorEventsTableRow[];
 }
 ```
 

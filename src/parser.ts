@@ -1,4 +1,4 @@
-import { SorMetadata, SorEvent } from './types';
+import { SorMetadata, SorEvent, SorEventType, SorEventsTableRow } from './types';
 
 export class SorData implements SorMetadata {
 	cableId: string;
@@ -9,6 +9,8 @@ export class SorData implements SorMetadata {
 	duration: number;
 	rangeMeters: number;
 	refractiveIndex: number;
+	endToEndLossDb: number;
+	opticalReturnLossDb: number;
 	events: SorEvent[];
 	dataPoints: number[];
 
@@ -21,6 +23,8 @@ export class SorData implements SorMetadata {
 		this.duration = metadata.duration;
 		this.rangeMeters = metadata.rangeMeters;
 		this.refractiveIndex = metadata.refractiveIndex;
+		this.endToEndLossDb = metadata.endToEndLossDb;
+		this.opticalReturnLossDb = metadata.opticalReturnLossDb;
 		this.events = metadata.events;
 		this.dataPoints = metadata.dataPoints;
 	}
@@ -39,9 +43,70 @@ export class SorData implements SorMetadata {
 			duration: this.duration,
 			rangeMeters: this.rangeMeters,
 			refractiveIndex: this.refractiveIndex,
+			endToEndLossDb: this.endToEndLossDb,
+			opticalReturnLossDb: this.opticalReturnLossDb,
 			events: [...this.events],
 			dataPoints: [...this.dataPoints],
 		};
+	}
+
+	/**
+	 * Builds an OTDR-style events table: a launch row at 0 m, a fiber-section
+	 * row between consecutive events, and the last event rendered as end-of-fiber.
+	 */
+	public getEventsTable(): SorEventsTableRow[] {
+		const rows: SorEventsTableRow[] = [];
+		const events = [...this.events].sort((a, b) => a.distanceMeters - b.distanceMeters);
+		if (events.length === 0) return rows;
+
+		let prevDistance = 0;
+		if (events[0].distanceMeters > 0) {
+			rows.push({
+				eventNumber: 0,
+				type: 'launch',
+				distanceMeters: 0,
+				sectionLengthMeters: null,
+				lossDb: null,
+				reflectanceDb: null,
+			});
+		}
+
+		for (let i = 0; i < events.length; i++) {
+			const event = events[i];
+			if (event.distanceMeters > prevDistance) {
+				rows.push({
+					eventNumber: null,
+					type: 'fiber-section',
+					distanceMeters: null,
+					sectionLengthMeters: event.distanceMeters - prevDistance,
+					lossDb: null,
+					reflectanceDb: null,
+				});
+			}
+
+			const isFirst = i === 0 && event.distanceMeters === 0;
+			const isLast = i === events.length - 1;
+			rows.push({
+				eventNumber: event.eventNumber,
+				type: isFirst ? 'launch' : isLast ? 'end-of-fiber' : event.eventType,
+				distanceMeters: event.distanceMeters,
+				sectionLengthMeters: null,
+				lossDb: event.spliceLossDb !== 0 ? event.spliceLossDb : null,
+				reflectanceDb: event.reflectionLossDb !== 0 ? event.reflectionLossDb : null,
+			});
+			prevDistance = event.distanceMeters;
+		}
+
+		return rows;
+	}
+}
+
+function classifyEventType(typeCode: string): SorEventType {
+	switch (typeCode.charAt(0)) {
+		case '0': return 'splice';
+		case '1': return 'connector';
+		case '2': return 'saturated';
+		default: return 'unknown';
 	}
 }
 
@@ -70,6 +135,8 @@ export class SorParser {
 			duration: 0,
 			rangeMeters: 10000,
 			refractiveIndex: 1.468,
+			endToEndLossDb: 0,
+			opticalReturnLossDb: 0,
 			events: [],
 			dataPoints: [],
 		};
@@ -164,6 +231,7 @@ export class SorParser {
 					if (header.str === 'KeyEvents') {
 						pos = header.nextOffset;
 						const numEvents = this.view.getInt16(pos, true); pos += 2;
+						const refractiveIndex = metadata.refractiveIndex || 1.468;
 
 						for (let e = 0; e < numEvents; e++) {
 							const eventNum = this.view.getInt16(pos, true); pos += 2;
@@ -172,21 +240,36 @@ export class SorParser {
 							const spliceLoss = this.view.getInt16(pos, true) / 1000; pos += 2;
 							const rawReflLoss = this.view.getInt32(pos, true); pos += 4;
 							const reflLoss = rawReflLoss === -2147483648 ? 0 : rawReflLoss / 1000;
-							const eventType = this.readStringLength(pos, 10); pos += 10;
+							const typeCode = this.readStringLength(pos, 8); pos += 8;
+							if (blockRev >= 200) {
+								// SR-4731 rev >= 2.00 adds five 4-byte marker positions
+								// (end of previous, start/end of current, start of next, peak)
+								pos += 20;
+							}
 							const comment = this.readNullTerminatedString(pos); pos = comment.nextOffset;
 
+							// eventLoc is in 100 ps units of one-way travel time
+							// (same convention as sampleSpacing above, so no division by 2)
 							const timeSec = eventLoc * 1e-10;
-							const refractiveIndex = metadata.refractiveIndex || 1.468;
-							const distanceMeters = (timeSec * 2.99792458e8 / refractiveIndex) / 2;
+							const distanceMeters = timeSec * 2.99792458e8 / refractiveIndex;
 
 							metadata.events.push({
 								eventNumber: eventNum,
-								distanceMeters: Math.round(distanceMeters * 100) / 100,
+								distanceMeters: Math.round(distanceMeters),
 								slopeDbPerKm: slope,
 								spliceLossDb: spliceLoss,
 								reflectionLossDb: reflLoss,
-								eventType: eventType.trim(),
+								typeCode,
+								eventType: classifyEventType(typeCode),
 							});
+						}
+
+						// Block trailer: end-to-end loss (int32, 0.001 dB), two end-to-end
+						// marker positions (int32 each), optical return loss (uint16, 0.001 dB)
+						if (pos + 14 <= this.view.byteLength) {
+							metadata.endToEndLossDb = this.view.getInt32(pos, true) / 1000; pos += 4;
+							pos += 8;
+							metadata.opticalReturnLossDb = this.view.getUint16(pos, true) / 1000;
 						}
 					}
 				} else if (blockName.str === 'DataPts') {
