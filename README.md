@@ -1,4 +1,4 @@
-# js-otdr 📡
+# js-otdr 📡 (Development Stage)
 
 > A lightweight, zero-dependency TypeScript/JavaScript library for parsing Telcordia SR-4731 Optical Time Domain Reflectometer (`.sor`) binary files.
 
