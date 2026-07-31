@@ -1,3 +1,4 @@
+import { ParseError } from './error';
 import { SorMetadata, SorEvent, SorEventType, SorEventsTableRow } from './types';
 
 export class SorData implements SorMetadata {
@@ -123,7 +124,7 @@ export class SorParser {
 		this.offset = 0;
 		const mapHeader = this.readStringLength(0, 4);
 		if (mapHeader !== 'Map') {
-			throw new Error('Invalid SOR file: Missing Map block');
+			throw new ParseError('Invalid SOR file: Missing Map block');
 		}
 
 		const metadata: SorMetadata = {
