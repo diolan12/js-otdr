@@ -10,6 +10,7 @@
     "dist"
   ],
   "scripts": {
+    "cli": "tsx src/cli.ts",
     "build": "tsup",
     "dev": "npx tsx script.ts",
     "test": "vitest run",
