@@ -12,6 +12,7 @@ import { KeyEvent, KeyEventsData } from './src/data/KeyEvents';
 import { SorEventType } from './src/util/types';
 
 console.clear()
+// testing exportables
 
 const fixturePath = path.resolve('./tests/fixtures/Core-1.sor');
 const buf = fs.readFileSync(fixturePath);
@@ -27,7 +28,7 @@ if ("fiberType" in genParams) {
 const supParams: SupParamsData = result.SupParams
 const fxdParams: FxdParamsData = result.FxdParams
 const dataPts: DataPtsData = result.DataPts
-const keyEventTypes: Array<SorEventType> = result.KeyEvents.events.map(e => e.eventType)
+const keyEventTypes: Array<SorEventType> = result.KeyEvents.events.map((e: KeyEvent) => e.eventType)
 const keyEvents: KeyEventsData = result.KeyEvents
 const checksum: CksumData = result.Cksum
 
