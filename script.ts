@@ -31,11 +31,4 @@ const keyEventTypes: Array<SorEventType> = result.KeyEvents.events.map(e => e.ev
 const keyEvents: KeyEventsData = result.KeyEvents
 const checksum: CksumData = result.Cksum
 
-// console.log(old)
-// console.dir(result.GenParams, { depth: null, colors: true });
-// console.dir(result.SupParams, { depth: null, colors: true });
-// console.dir(result.FxdParams, { depth: null, colors: true });
-// console.dir(result.DataPts, { depth: null, colors: true });
-// console.dir(result.KeyEvents, { depth: null, colors: true });
-// console.dir(result.Cksum, { depth: null, colors: true });
 console.dir(result, { depth: null, colors: true });
