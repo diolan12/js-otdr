@@ -1,4 +1,4 @@
-# js-otdr 📡 (Development Stage)
+# js-otdr 📡
 
 > A lightweight, zero-dependency TypeScript/JavaScript library for parsing Telcordia SR-4731 Optical Time Domain Reflectometer (`.sor`) binary files.
 
@@ -12,10 +12,12 @@
 ## 🚀 Features
 
 - ⚡ **Fast & Lightweight**: Zero runtime dependencies.
-- 📦 **Dual Module Format**: Works seamlessly in ESM and CommonJS environments (Node.js & Browsers).
-- 🧩 **Object-Oriented Design**: Encapsulated `SorParser` and `SorData` models.
-- 📄 **JSON Export**: Export parsed OTDR traces directly to JSON strings using `.toJson()`.
-- 🛠️ **Fully Typed**: Written in TypeScript with complete type definitions included.
+- 📦 **Dual Module & Browser Support**: Works in ESM, CommonJS, and Browser environments (Node.js & Web).
+- 🧩 **Complete Standard Block Support**: Parses `GenParams`, `SupParams`, `FxdParams`, `KeyEvents`, `DataPts`, and `Cksum` blocks according to Telcordia SR-4731 specifications.
+- 🔒 **Integrity Verification**: Automatic CRC-16 checksum validation for parsed SOR files.
+- 📄 **JSON Export**: Convenient `.toJson()` serialization with formatting options.
+- 🛠️ **CLI Tool Included**: Convert `.sor` files to `.json` directly from the command line.
+- 🟦 **Fully Typed**: Written in TypeScript with exportable interfaces and types.
 
 ---
 
@@ -37,7 +39,7 @@ bun add @diolan12/js-otdr
 
 ### CDN (Browser `<script>` Tag)
 
-You can also use `@diolan12/js-otdr` directly in the browser without a bundler via **jsDelivr** or **unpkg**:
+Include `@diolan12/js-otdr` directly in the browser via **jsDelivr** or **unpkg**:
 
 #### Via IIFE (`<script>` tag with global `JsOtdr`):
 
@@ -47,6 +49,7 @@ You can also use `@diolan12/js-otdr` directly in the browser without a bundler v
   // Access via global JsOtdr namespace
   const parser = new JsOtdr.SorParser(arrayBuffer);
   const sorData = parser.parse();
+  console.log(sorData.GenParams.cableId);
   console.log(sorData.toJson(true));
 </script>
 ```
@@ -71,7 +74,7 @@ You can also use `@diolan12/js-otdr` directly in the browser without a bundler v
 Pass an `ArrayBuffer` to `SorParser` to extract structured OTDR metadata:
 
 ```typescript
-import { SorParser } from 'js-otdr';
+import { SorParser } from '@diolan12/js-otdr';
 import * as fs from 'node:fs';
 
 // Read SOR binary file in Node.js
@@ -85,70 +88,63 @@ const arrayBuffer = fileBuffer.buffer.slice(
 const parser = new SorParser(arrayBuffer);
 const sorData = parser.parse();
 
-console.log(`Cable ID: ${sorData.cableId}`);
-console.log(`Wavelength: ${sorData.wavelengthNm} nm`);
-console.log(`Events Found: ${sorData.events.length}`);
+// Access parsed block metadata
+console.log(`Cable ID: ${sorData.GenParams.cableId}`);
+console.log(`Wavelength: ${sorData.FxdParams.wavelengthNm} nm`);
+console.log(`Pulse Width: ${sorData.FxdParams.pulseWidthNs} ns`);
+console.log(`OTDR Supplier: ${sorData.SupParams.supplier}`);
+console.log(`Events Count: ${sorData.KeyEvents.numEvents}`);
+console.log(`Checksum Valid: ${sorData.Cksum.isValid}`);
 ```
 
-### 2. Exporting to JSON (`toJson`)
+### 2. Accessing Key Events & Data Points
 
-Convert parsed OTDR data into a JSON string directly from `SorParser` or `SorData`:
+Iterate over events detected along the fiber trace:
 
 ```typescript
-import { SorParser } from 'js-otdr';
+// Access individual key events
+sorData.KeyEvents.events.forEach((event) => {
+  console.log(
+    `Event #${event.eventNumber}: ${event.eventType} at ${event.distanceKm} km (Loss: ${event.spliceLossDb} dB, Reflectance: ${event.reflectionLossDb} dB)`
+  );
+});
 
+// Access trace summary
+const { totalLossDb, orlDb } = sorData.KeyEvents.summary;
+console.log(`Total Loss: ${totalLossDb} dB, Optical Return Loss: ${orlDb} dB`);
+
+// Access trace dB values array for plotting
+const dbPoints = sorData.DataPts.dbPoints; // Float32Array of loss values in dB
+```
+
+### 3. Exporting to JSON (`toJson`)
+
+Convert parsed OTDR data into a JSON string:
+
+```typescript
 const parser = new SorParser(arrayBuffer);
 
 // Format with 2-space indentation
 const prettyJson = parser.toJson(true);
 console.log(prettyJson);
 
-// Compact JSON string
-const compactJson = parser.toJson(false);
-```
-
-You can also call `.toJson()` on an existing `SorData` instance:
-
-```typescript
+// Compact JSON string from SorData
 const sorData = parser.parse();
-const jsonOutput = sorData.toJson(true);
+const compactJson = sorData.toJson(false);
 ```
 
-### 3. Events Table (`getEventsTable`)
+---
 
-Build an OTDR-style events table — a launch row, a fiber-section row between
-consecutive events, and the last event rendered as end-of-fiber — ready to feed
-straight into a UI table:
+## 🖥️ Command Line Interface (CLI)
 
-```typescript
-const sorData = parser.parse();
+The package includes a CLI utility to convert `.sor` files to `.json` directly:
 
-for (const row of sorData.getEventsTable()) {
-  console.log(row.type, row.distanceMeters, row.sectionLengthMeters, row.lossDb, row.reflectanceDb);
-}
-```
+```bash
+# Process a .sor file and save output to trace.json
+npx @diolan12/js-otdr -i trace.sor -o trace.json
 
-| # | distance | section length | type | loss | reflectance |
-|---|----------|----------------|------|------|-------------|
-| 0 | 0.000 km | — | `launch` | — | — |
-| — | — | 16.066 km | `fiber-section` | — | — |
-| 1 | 16.066 km | — | `splice` | 0.193 dB | — |
-| — | — | 4.895 km | `fiber-section` | — | — |
-| 2 | 20.961 km | — | `splice` | 1.967 dB | — |
-| … | | | | | |
-| 5 | 39.490 km | — | `end-of-fiber` | — | -49.298 dB |
-
-Each row is a `SorEventsTableRow`:
-
-```typescript
-interface SorEventsTableRow {
-  eventNumber: number | null;        // null for fiber-section rows, 0 for the launch row
-  type: 'launch' | 'fiber-section' | 'splice' | 'connector' | 'saturated' | 'end-of-fiber' | 'unknown';
-  distanceMeters: number | null;     // null for fiber-section rows
-  sectionLengthMeters: number | null; // only set on fiber-section rows
-  lossDb: number | null;
-  reflectanceDb: number | null;
-}
+# Or run via script in local repository
+npm run cli -- -i tests/fixtures/yokogawa.sor -o output.json
 ```
 
 ---
@@ -159,103 +155,53 @@ interface SorEventsTableRow {
 
 ```typescript
 class SorParser {
-  constructor(buffer: ArrayBuffer)
+  constructor(buffer: ArrayBuffer);
   
   // Parses the buffer and returns a SorData instance
-  public parse(): SorData
+  public parse(): SorData;
   
-  // Conveniently converts parsed SOR data directly into JSON
-  public toJson(pretty?: boolean): string
+  // Converts parsed SOR data directly into JSON string
+  public toJson(pretty?: boolean): string;
 }
 ```
 
 ### `SorData`
 
+`SorData` encapsulates all standard Telcordia SR-4731 blocks:
+
 ```typescript
 class SorData implements SorMetadata {
-  cableId: string;
-  fiberId: string;
-  wavelengthNm: number;
-  pulseWidthNs: number;
-  rangeMeters: number;
-  refractiveIndex: number;
-  endToEndLossDb: number;
-  opticalReturnLossDb: number;
-  events: SorEvent[];
-  dataPoints: number[];
+  GenParams: GenParamsData;   // General parameters (cable ID, fiber type, location, etc.)
+  SupParams: SupParamsData;   // Supplier parameters (manufacturer, OTDR model, software, etc.)
+  FxdParams: FxdParamsData;   // Fixed parameters (wavelength, pulse width, IOR, trace length, data points, etc.)
+  KeyEvents: KeyEventsData;   // Event table and summary metrics (splice loss, reflectance, ORL, etc.)
+  DataPts: DataPtsData;       // Raw and scaled data points (Uint16Array & Float32Array)
+  Cksum: CksumData;           // Checksum validation result (stored vs calculated CRC-16)
 
-  // Formats data as JSON string
+  // Serializes all block data to JSON string
   public toJson(pretty?: boolean): string;
 
-  // Returns plain JavaScript object clone
+  // Returns plain JavaScript object containing all block data
   public toObject(): SorMetadata;
-
-  // Builds an OTDR-style events table (launch / fiber sections / events / end-of-fiber)
-  public getEventsTable(): SorEventsTableRow[];
 }
 ```
 
 ---
 
-## 🧪 Development & Unit Testing
+## 🧪 Testing & Development
 
-We use [Vitest](https://vitest.dev/) for unit testing and [tsup](https://tsup.build/) for TypeScript bundling.
-
-### Running Tests
+Unit tests are written using [Vitest](https://vitest.dev/).
 
 ```bash
-# Run unit test suite once
+# Run unit test suite
 npm test
 
 # Run tests in watch mode during development
 npm run test:watch
-```
 
-### Test Directory Structure
-
-```text
-tests/
-├── fixtures/
-│   └── Core-47.sor      # Sample .sor binary test files
-└── parser.test.ts       # SorParser and SorData test suite
-```
-
-### Adding New Test Cases
-
-When contributing new features or parsing capabilities, add corresponding unit test cases in `tests/parser.test.ts`:
-
-```typescript
-import { describe, it, expect } from 'vitest';
-import { SorParser } from '../src/parser';
-
-describe('My New Feature', () => {
-  it('should parse custom SOR attributes', () => {
-    // Write test expectations here
-  });
-});
-```
-
----
-
-## 🛠️ Building
-
-To bundle ESM (`dist/index.js`), CommonJS (`dist/index.cjs`), and declaration files (`dist/index.d.ts`):
-
-```bash
+# Build package outputs (ESM, CJS, IIFE, DTS)
 npm run build
 ```
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature/my-feature`).
-3. Write clean, readable TypeScript code following OOP principles.
-4. Add unit tests for your changes and verify with `npm test`.
-5. Open a Pull Request detailing your changes.
 
 ---
 
