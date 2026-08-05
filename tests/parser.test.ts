@@ -39,7 +39,9 @@ describe('SorParser - yokogawa.sor fixture test', () => {
         expect(GenParams.cableId).toBe('0117');
         expect(GenParams.fiberId).toBeUndefined();
         expect("fiberType" in GenParams).toBe(true);
-        expect((GenParams as any).fiberType).toBe(SorFiberType.G652);
+        if ("fiberType" in GenParams) {
+            expect(GenParams.fiberType).toBe(SorFiberType.G652);
+        }
         expect(GenParams.wavelengthNm).toBe(1310);
         expect(GenParams.buildCondition).toBe('BC');
         expect(GenParams.userOffset).toBe(0);
