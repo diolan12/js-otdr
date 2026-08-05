@@ -1,7 +1,8 @@
 export { SorParser } from './parser';
 export { SorData } from './data'
 
-export type { SorMetadata, SorEventType, SorFiberType } from './util/types';
+export { SorEventType, SorFiberType } from './util/types';
+export type { SorMetadata } from './util/types';
 export type { ParseError, ChecksumError } from './util/error';
 
 export type { GenParamsData, GenParamsDataV1, GenParamsDataV2 } from './data/GenParams';
