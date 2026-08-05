@@ -248,27 +248,35 @@ export class KeyEvents extends SorBaseBlock<KeyEventsData> {
             return { eventType: SorEventType.UNKNOWN, isManual: false };
         }
 
-        const subType = code.charAt(0);
-        const reflectType = code.charAt(1);
-        const isManual = code.includes("A");
+        const subType = code.charAt(0);      // '0' = Normal, '1' = End of Transmission (EOT), '2' = Manual
+        const reflectType = code.charAt(1);  // Event classification ('F', 'C', 'S', 'E', 'M', etc.)
 
+        // Character '2' at pos 0 indicates manually added event in GR-196
+        const isManual = subType === "2";
+
+        // 1. End of Fiber (EOT flag '1', 'E' event type, or last event)
         if (subType === "1" || reflectType === "E" || isLast) {
             return { eventType: SorEventType.ENDOFFIBER, isManual };
         }
 
-        if (subType === "0" && reflectType === "0" && isFirst) {
+        // 2. Launch / Start of Fiber
+        if (isFirst) {
             return { eventType: SorEventType.LAUNCH, isManual };
         }
 
+        // 3. Macrobend
         if (reflectType === "M") {
             return { eventType: SorEventType.MACROBEND, isManual };
         }
 
-        if (reflectType === "F" || reflectType === "R" || reflectType === "C") {
+        // 4. Reflective Events (Connector / Reflection Peak)
+        if (reflectType === "C" || reflectType === "R") {
             return { eventType: SorEventType.CONNECTOR, isManual };
         }
 
-        if (reflectType === "N" || reflectType === "S") {
+        // 5. Non-Reflective / Flat Events (Fusion Splice / Step Loss)
+        // 'F' = Flat / Non-Reflective, 'S' = Splice, 'N' = Non-reflective drop
+        if (reflectType === "F" || reflectType === "S" || reflectType === "N") {
             return { eventType: SorEventType.SPLICE, isManual };
         }
 
