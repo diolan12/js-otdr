@@ -10,7 +10,6 @@ import { KeyEvents } from './data/KeyEvents';
 import { SorData } from './data';
 
 export class SorParser {
-	private buffer: ArrayBuffer;
 	private parsedData: SorData | null = null;
 
 	private GenParams: GenParams;
@@ -21,40 +20,38 @@ export class SorParser {
 	private Cksum: Cksum;
 
 	constructor(buffer: ArrayBuffer) {
-		this.buffer = buffer;
-
-		const mapBlock = new MapBlock(this.buffer).toObject();
+		const mapBlock = new MapBlock(buffer);
 
 		const genParams = mapBlock.get('GenParams');
 		if (!genParams)
 			throw new ParseError('Invalid SOR file: Missing GenParams block');
 
-		this.GenParams = new GenParams(this.buffer, genParams);
+		this.GenParams = new GenParams(genParams);
 
 		const supParams = mapBlock.get('SupParams');
 		if (!supParams)
 			throw new ParseError('Invalid SOR file: Missing SupParams block');
-		this.SupParams = new SupParams(this.buffer, supParams);
+		this.SupParams = new SupParams(supParams);
 
 		const fxdParams = mapBlock.get('FxdParams');
 		if (!fxdParams)
 			throw new ParseError('Invalid SOR file: Missing FxdParams block');
-		this.FxdParams = new FxdParams(this.buffer, fxdParams);
+		this.FxdParams = new FxdParams(fxdParams);
 
 		const dataPts = mapBlock.get('DataPts');
 		if (!dataPts)
 			throw new ParseError('Invalid SOR file: Missing DataPts block');
-		this.DataPts = new DataPts(this.buffer, dataPts);
+		this.DataPts = new DataPts(dataPts);
 
 		const keyEvents = mapBlock.get('KeyEvents');
 		if (!keyEvents)
 			throw new ParseError('Invalid SOR file: Missing KeyEvents block');
-		this.KeyEvents = new KeyEvents(this.buffer, keyEvents, this.FxdParams.toObject());
+		this.KeyEvents = new KeyEvents(keyEvents, this.FxdParams.toObject());
 
 		const cksum = mapBlock.get('Cksum');
 		if (!cksum)
 			throw new ChecksumError('Invalid SOR file: Missing Cksum block');
-		this.Cksum = new Cksum(this.buffer, cksum);
+		this.Cksum = new Cksum(cksum);
 	}
 
 	public parse(): SorData {

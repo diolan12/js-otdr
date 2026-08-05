@@ -14,8 +14,8 @@ export type SupParamsData = {
 
 export class SupParams extends SorBaseBlock<SupParamsData> {
     private data: SupParamsData;
-    constructor(buffer: ArrayBuffer, block: Block) {
-        super(buffer, block);
+    constructor(block: Block) {
+        super(block);
         // 1. Skip / verify block name ("SupParams\0")
         const blockName = this.reader.readNullTerminatedString();
 

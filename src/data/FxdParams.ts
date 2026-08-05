@@ -24,8 +24,8 @@ export interface FxdParamsData {
 export class FxdParams extends SorBaseBlock<FxdParamsData> {
     private data: FxdParamsData;
 
-    constructor(buffer: ArrayBuffer, block: Block) {
-        super(buffer, block);
+    constructor(block: Block) {
+        super(block);
         this.data = this.parse();
     }
 

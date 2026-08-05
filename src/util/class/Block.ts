@@ -5,4 +5,5 @@ export interface Block {
     readonly positionStart: number;
     readonly positionEnd: number;
     readonly order: number;
+    readonly buffer: ArrayBuffer;
 }

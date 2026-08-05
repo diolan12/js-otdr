@@ -13,8 +13,8 @@ export type CksumData = {
 export class Cksum extends SorBaseBlock<CksumData> {
     private data: CksumData;
 
-    constructor(buffer: ArrayBuffer, block: Block) {
-        super(buffer, block);
+    constructor(block: Block) {
+        super(block);
         try {
             this.data = this.parse();
         }

@@ -5,9 +5,9 @@ export abstract class SorBaseBlock<TData> {
     protected reader: BinaryReader;
     protected block: Block;
 
-    constructor(buffer: ArrayBuffer, block: Block) {
+    constructor(block: Block) {
         this.block = block;
-        this.reader = new BinaryReader(buffer, block.positionStart);
+        this.reader = new BinaryReader(block.buffer, block.positionStart);
     }
 
     /** Derived classes implement this to return structured data */

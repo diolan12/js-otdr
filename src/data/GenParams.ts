@@ -53,8 +53,8 @@ function classifyFiberType(fiberCode: number): SorFiberType {
 export class GenParams extends SorBaseBlock<GenParamsData> {
     private data: GenParamsData;
 
-    constructor(buffer: ArrayBuffer, block: Block) {
-        super(buffer, block);
+    constructor(block: Block) {
+        super(block);
 
         switch (this.block.version) {
             case 1:

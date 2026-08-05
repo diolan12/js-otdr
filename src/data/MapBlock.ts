@@ -15,8 +15,9 @@ export class MapBlock extends SorBaseBlock<Map<string, Block>> {
             positionStart: 0,
             positionEnd: 0,
             order: 0,
+            buffer,
         };
-        super(buffer, mapBlockMeta);
+        super(mapBlockMeta);
 
         this.blocks = new Map();
 
@@ -50,7 +51,7 @@ export class MapBlock extends SorBaseBlock<Map<string, Block>> {
             const version = rawVersion / 100; // e.g. 200 -> 2.0, 100 -> 1.0
             const positionStart = currentOffset;
             const positionEnd = currentOffset + size;
-
+            const blockBuffer = new Uint8Array(buffer, positionStart, size);
             this.blocks.set(blockName, {
                 name: blockName,
                 version,
@@ -58,6 +59,7 @@ export class MapBlock extends SorBaseBlock<Map<string, Block>> {
                 positionStart,
                 positionEnd,
                 order: order - 1, // Normalized 1-based index for non-map data blocks
+                buffer
             });
 
             // Advance pointer to the start of the next block

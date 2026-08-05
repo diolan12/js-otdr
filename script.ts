@@ -14,7 +14,7 @@ import { SorEventType } from './src/util/types';
 console.clear()
 // testing exportables
 
-const fixturePath = path.resolve('./tests/fixtures/Core-1.sor');
+const fixturePath = path.resolve('./tests/fixtures/yokogawa.sor');
 const buf = fs.readFileSync(fixturePath);
 const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 

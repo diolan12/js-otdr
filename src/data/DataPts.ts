@@ -12,8 +12,8 @@ export type DataPtsData = {
 export class DataPts extends SorBaseBlock<DataPtsData> {
     private data: DataPtsData;
 
-    constructor(buffer: ArrayBuffer, block: Block) {
-        super(buffer, block);
+    constructor(block: Block) {
+        super(block);
         this.data = this.parse();
     }
 

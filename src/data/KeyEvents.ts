@@ -49,20 +49,20 @@ export interface KeyEventsSummaryV2 extends KeyEventsSummaryV1 {
 export type KeyEventsSummary = KeyEventsSummaryV1 | KeyEventsSummaryV2;
 
 export interface KeyEventsDataV1 {
+    blockName: string;
     numEvents: number;
     events: KeyEventV1[];
     summary: KeyEventsSummaryV1;
 }
 
 export interface KeyEventsDataV2 {
+    blockName: string;
     numEvents: number;
     events: KeyEventV2[];
     summary: KeyEventsSummaryV2;
 }
 
-export type KeyEventsData = KeyEventsDataV1 | KeyEventsDataV2 & {
-    blockName: string;
-};
+export type KeyEventsData = KeyEventsDataV1 | KeyEventsDataV2;
 
 /** No-reflection sentinel used by Issue 1 files (Int16 field). */
 const ISSUE1_NO_REFLECTANCE = -32768;
@@ -76,11 +76,10 @@ export class KeyEvents extends SorBaseBlock<KeyEventsData> {
     private formatVersion: KeyEventsFormatVersion;
 
     constructor(
-        buffer: ArrayBuffer,
         block: Block,
         private fxdParams: FxdParamsData,
     ) {
-        super(buffer, block);
+        super(block);
 
         // Version lives on the block directory entry itself, not something this
         // block infers from its own bytes.

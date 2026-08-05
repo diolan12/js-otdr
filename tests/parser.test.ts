@@ -1,11 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { SorParser } from '../src/parser';
-import { SPEED_OF_LIGHT } from '../src/util/const';
-import { ParseError } from '../src/util/error';
+import { SorData } from '../src/data';
+import { SorEventType, SorFiberType } from '../src/util/types';
 
-// Helper to convert Node.js Buffer to ArrayBuffer
 function getArrayBuffer(filePath: string): ArrayBuffer {
     const buffer = fs.readFileSync(filePath);
     return buffer.buffer.slice(
@@ -14,129 +13,132 @@ function getArrayBuffer(filePath: string): ArrayBuffer {
     );
 }
 
-describe('SorParser', () => {
-    it('should throw an error if buffer is empty or smaller than 4 bytes', () => {
-        const emptyBuffer = new Uint8Array([]).buffer;
-        const parser = new SorParser(emptyBuffer);
+describe('SorParser - yokogawa.sor fixture test', () => {
+    let fixturePath: string;
+    let arrayBuffer: ArrayBuffer;
+    let parser: SorParser;
+    let result: SorData;
 
-        expect(() => parser.parse()).toThrow(new ParseError("Invalid SOR file: Missing Map block"));
+    beforeAll(() => {
+        fixturePath = path.resolve(__dirname, 'fixtures/yokogawa.sor');
+        expect(fs.existsSync(fixturePath)).toBe(true);
+        arrayBuffer = getArrayBuffer(fixturePath);
+        parser = new SorParser(arrayBuffer);
+        result = parser.parse();
     });
 
-    it('should throw an error for invalid non-SOR files', () => {
-        // Mock an invalid 4-byte buffer that does NOT start with "Map"
-        const fakeBuffer = new Uint8Array([0x00, 0x01, 0x02, 0x03]).buffer;
-        const parser = new SorParser(fakeBuffer);
-
-        expect(() => parser.parse()).toThrowError(new ParseError('Invalid SOR file: Missing Map block'));
+    it('should successfully parse yokogawa.sor into SorData', () => {
+        expect(result).toBeInstanceOf(SorData);
     });
 
-    it('should parse a synthetic buffer starting with "Map"', () => {
-        const header = new TextEncoder().encode('Map\0');
-        const parser = new SorParser(header.buffer);
-        const result = parser.parse();
-
-        expect(result).toBeDefined();
-        expect(result.GenParams.cableId).toBe('DEFAULT_CABLE');
-        expect(result.FxdParams.wavelengthNm).toBe(1550);
-        expect(Array.isArray(result.KeyEvents.events)).toBe(true);
-        expect(Array.isArray(result.DataPts.numDataPoints)).toBe(true);
+    it('should parse GenParams correctly', () => {
+        const { GenParams } = result;
+        expect(GenParams.blockName).toBe('GenParams');
+        expect(GenParams.version).toBe(2);
+        expect(GenParams.lang).toBe('EN');
+        expect(GenParams.cableId).toBe('0117');
+        expect(GenParams.fiberId).toBeUndefined();
+        expect("fiberType" in GenParams).toBe(true);
+        expect((GenParams as any).fiberType).toBe(SorFiberType.G652);
+        expect(GenParams.wavelengthNm).toBe(1310);
+        expect(GenParams.buildCondition).toBe('BC');
+        expect(GenParams.userOffset).toBe(0);
     });
 
-    it('should parse real fixture file Core-47.sor if present', () => {
-        const fixturePath = path.resolve(__dirname, 'fixtures/Core-47.sor');
-
-        if (!fs.existsSync(fixturePath)) {
-            console.warn('Skipping test: Core-47.sor not found in tests/fixtures/');
-            return;
-        }
-
-        const arrayBuffer = getArrayBuffer(fixturePath);
-        const parser = new SorParser(arrayBuffer);
-        const result = parser.parse();
-        const index = 0;
-
-        expect(result).toBeDefined();
-        expect(result.GenParams.cableId).toBe("0117");
-        expect(result.FxdParams.timestamp).toBe(1781958546);
-        expect(result.FxdParams.wavelengthNm).toBe(1310);
-        expect(result.FxdParams.pulseWidthNs).toBe(20000);
-        // expect(result.FxdParams.duration).toBe(20.0);
-        // Inside FxdParams or KeyEvents parser:
-        // const sampleSpacingMeters = (result.FxdParams.sampleSpacingUnits * 2.048e-6 * SPEED_OF_LIGHT) / (2 * result.FxdParams.ior);
-        // const maxTraceLengthKm = Math.round((result.FxdParams.numDataPoints * sampleSpacingMeters) / 1000);
-
-        // Result -> 102.406 km
-        // expect(maxTraceLengthKm).toBe(102669);
-        expect(result.KeyEvents.events).toHaveLength(5);
-        // expect(result.KeyEvents.events[0].distanceMeters).toBe(16066)
-        expect(result.KeyEvents.events[0].eventType).toBe("Connector")
-        // expect(result.KeyEvents.events[0].typeCode).toBe("0F9999LS")
-        expect(result.KeyEvents.events[0].eventNumber).toBe(1)
-        expect(result.KeyEvents.events[0].spliceLossDb).toBe(0.193)
-        // expect(result.KeyEvents.events[1].distanceMeters).toBe(20961)
-        expect(result.KeyEvents.events[1].spliceLossDb).toBe(1.967)
-        // expect(result.KeyEvents.events[2].distanceMeters).toBe(29503)
-        expect(result.KeyEvents.events[2].spliceLossDb).toBe(4.915)
-        expect(result.KeyEvents.events[4].eventType).toBe("End of Fiber")
-        expect(result.KeyEvents.events[4].reflectionLossDb).toBe(-49.298)
-        // expect(result.endToEndLossDb).toBe(31.589)
-        // expect(result.opticalReturnLossDb).toBe(32.333)
+    it('should parse SupParams correctly', () => {
+        const { SupParams } = result;
+        expect(SupParams.blockName).toBe('SupParams');
+        expect(SupParams.supplier).toBe('YOKOGAWA TEST AND MEASUREMENT CORPORATION');
+        expect(SupParams.otdr).toBe('AQ1210');
+        expect(SupParams.otdrSn).toBe('C3ZA16019F');
+        expect(SupParams.module).toBe('M_0E_0');
+        expect(SupParams.software).toBe('1.07-S1');
     });
 
-    it('should build an events table from Core-47.sor', () => {
-        const fixturePath = path.resolve(__dirname, 'fixtures/Core-47.sor');
-
-        if (!fs.existsSync(fixturePath)) {
-            console.warn('Skipping test: Core-47.sor not found in tests/fixtures/');
-            return;
-        }
-
-        const result = new SorParser(getArrayBuffer(fixturePath)).parse();
-        // const table = result.getEventsTable();
-
-        // launch + 5 events, each preceded by a fiber section
-        // expect(table).toHaveLength(11);
-        // expect(table[0]).toMatchObject({ eventNumber: 0, type: 'launch', distanceMeters: 0 });
-        // expect(table[1]).toMatchObject({ type: 'fiber-section', sectionLengthMeters: 16066 });
-        // expect(table[2]).toMatchObject({ eventNumber: 1, type: 'splice', distanceMeters: 16066, lossDb: 0.193 });
-        // expect(table[3]).toMatchObject({ type: 'fiber-section', sectionLengthMeters: 4895 });
-        // expect(table[4]).toMatchObject({ eventNumber: 2, distanceMeters: 20961, lossDb: 1.967 });
-        // expect(table[5]).toMatchObject({ type: 'fiber-section', sectionLengthMeters: 8542 });
-        // expect(table[6]).toMatchObject({ eventNumber: 3, distanceMeters: 29503, lossDb: 4.915 });
-        // expect(table[10]).toMatchObject({ type: 'end-of-fiber', reflectanceDb: -49.298 });
+    it('should parse FxdParams correctly', () => {
+        const { FxdParams } = result;
+        expect(FxdParams.blockName).toBe('FxdParams');
+        expect(FxdParams.timestamp).toBe(1781958546);
+        expect(FxdParams.dateTime).toBeInstanceOf(Date);
+        expect(FxdParams.unit).toBe('km');
+        expect(FxdParams.wavelengthNm).toBe(1310);
+        expect(FxdParams.pulseWidthNs).toBe(20000);
+        expect(FxdParams.sampleSpacingUnits).toBeCloseTo(0.16);
+        expect(FxdParams.numDataPoints).toBe(3125);
+        expect(FxdParams.ior).toBe(1.46);
+        expect(FxdParams.backscatterCoeffDb).toBe(-80);
+        expect(FxdParams.averagesCount).toBe(14848);
+        expect(FxdParams.lossThreshold).toBe(0.2);
+        expect(FxdParams.reflectionThreshold).toBeCloseTo(19.264);
+        expect(FxdParams.traceLengthMeters).toBe(500);
     });
 
-    it('should parse real fixture file Core-1.SOR if present', () => {
-        const fixturePath = path.resolve(__dirname, 'fixtures/Core-1.SOR');
+    it('should parse KeyEvents correctly', () => {
+        const { KeyEvents } = result;
+        expect(KeyEvents.blockName).toBe('KeyEvents');
+        expect(KeyEvents.numEvents).toBe(5);
+        expect(KeyEvents.events).toHaveLength(5);
 
-        if (!fs.existsSync(fixturePath)) {
-            console.warn('Skipping test: Core-1.SOR not found in tests/fixtures/');
-            return;
-        }
+        // Event 1
+        const e1 = KeyEvents.events[0];
+        expect(e1.eventNumber).toBe(1);
+        expect(e1.distanceKm).toBe(16.066);
+        expect(e1.slopeDbPerKm).toBe(0.363);
+        expect(e1.spliceLossDb).toBe(0.193);
+        expect(e1.reflectionLossDb).toBe(0);
+        expect(e1.isReflective).toBe(true);
+        expect(e1.rawType).toBe('0F9999LS');
+        expect(e1.eventType).toBe(SorEventType.CONNECTOR);
+        expect(e1.isManual).toBe(false);
 
-        const arrayBuffer = getArrayBuffer(fixturePath);
-        const parser = new SorParser(arrayBuffer);
-        const result = parser.parse();
+        // Event 5 (End of Fiber)
+        const e5 = KeyEvents.events[4];
+        expect(e5.eventNumber).toBe(5);
+        expect(e5.distanceKm).toBe(39.49);
+        expect(e5.spliceLossDb).toBe(0);
+        expect(e5.reflectionLossDb).toBe(-49.298);
+        expect(e5.eventType).toBe(SorEventType.ENDOFFIBER);
 
-        expect(result).toBeDefined();
-        // expect(result.wavelengthNm).toBeGreaterThan(0);
-        expect(Array.isArray(result.KeyEvents.events)).toBe(true);
+        // Summary
+        expect(KeyEvents.summary.totalLossDb).toBe(31.589);
+        expect(KeyEvents.summary.lossStartKm).toBe(16.066);
+        expect(KeyEvents.summary.lossFinishKm).toBe(39.49);
+        expect(KeyEvents.summary.orlDb).toBe(32.333);
+        expect(KeyEvents.summary.totalScanRangeKm).toBe(0.5);
     });
 
-    it('should convert parsed data to JSON using toJson()', () => {
-        const header = new TextEncoder().encode('Map\0');
-        const parser = new SorParser(header.buffer);
+    it('should parse DataPts correctly', () => {
+        const { DataPts } = result;
+        expect(DataPts.blockName).toBe('DataPts');
+        expect(DataPts.numDataPoints).toBe(3125);
+        expect(DataPts.scalingFactor).toBe(0.001);
+        expect(DataPts.rawPoints).toBeInstanceOf(Uint16Array);
+        expect(DataPts.rawPoints).toHaveLength(3125);
+        expect(DataPts.dbPoints).toBeInstanceOf(Float32Array);
+        expect(DataPts.dbPoints).toHaveLength(3125);
+    });
 
-        // Direct parser.toJson() call
-        const jsonString = parser.toJson(true);
-        expect(typeof jsonString).toBe('string');
+    it('should parse Cksum correctly and pass validation', () => {
+        const { Cksum } = result;
+        expect(Cksum.blockName).toBe('Cksum');
+        expect(Cksum.storedChecksum).toBe(35760);
+        expect(Cksum.calculatedChecksum).toBe(35760);
+        expect(Cksum.isValid).toBe(true);
+        expect(Cksum.algorithmUsed).toBe('CRC-16-CCITT (0xFFFF)');
+    });
 
-        const parsedObject = JSON.parse(jsonString);
-        expect(parsedObject.cableId).toBe('DEFAULT_CABLE');
-        expect(parsedObject.wavelengthNm).toBe(1550);
+    it('should convert parsed data to JSON and plain object', () => {
+        const jsonFromParser = parser.toJson(true);
+        expect(typeof jsonFromParser).toBe('string');
+        const parsedJson = JSON.parse(jsonFromParser);
+        expect(parsedJson.GenParams.cableId).toBe('0117');
+        expect(parsedJson.FxdParams.wavelengthNm).toBe(1310);
 
-        // SorData domain model toJson() call
-        const sorData = parser.parse();
-        expect(sorData.toJson()).toBe(JSON.stringify(parsedObject));
+        const jsonFromData = result.toJson();
+        expect(typeof jsonFromData).toBe('string');
+
+        const metadataObj = result.toObject();
+        expect(metadataObj.GenParams.cableId).toBe('0117');
+        expect(metadataObj.Cksum.isValid).toBe(true);
     });
 });
