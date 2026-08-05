@@ -117,7 +117,7 @@ export class KeyEvents extends SorBaseBlock<KeyEventsData> {
             }
             const summary = this.readSummary(distanceFactor, false, totalScanRangeKm);
             this.syncToBlockEnd();
-            return { numEvents, events, summary };
+            return { blockName: this.block.name, numEvents, events, summary };
         }
 
         const events: KeyEventV2[] = [];
