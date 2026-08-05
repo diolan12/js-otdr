@@ -90,7 +90,7 @@ describe('SorParser - yokogawa.sor fixture test', () => {
         expect(e1.reflectionLossDb).toBe(0);
         expect(e1.isReflective).toBe(true);
         expect(e1.rawType).toBe('0F9999LS');
-        expect(e1.eventType).toBe(SorEventType.CONNECTOR);
+        expect(e1.eventType).toBe(SorEventType.LAUNCH);
         expect(e1.isManual).toBe(false);
 
         // Event 5 (End of Fiber)
